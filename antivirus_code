@@ -1,0 +1,177 @@
+import os
+import hashlib
+import tkinter as tk
+from tkinter import filedialog, messagebox
+
+# Define known malware hashes (SHA-256) - add your actual hashes here
+KNOWN_MALWARE_HASHES = {
+    "malware_file1.exe": "d4f5f6a4e8f4b6e8f4a6e8f4b6e8f4b6e8f4a6e8f4b6e8f4b6e8f4b6e8f4b6",
+    "malware_file2.dll": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0"
+}
+
+# EICAR test signature (use bytes for binary-safe check)
+EICAR_SIGNATURE = b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+
+
+def calculate_file_hash(file_path):
+    """Calculate SHA-256 hash of a file."""
+    sha256 = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            while True:
+                data = f.read(65536)  # 64KB chunks
+                if not data:
+                    break
+                sha256.update(data)
+        return sha256.hexdigest()
+    except Exception as e:
+        print(f"Error calculating hash for {file_path}: {str(e)}")
+        return None
+
+
+def scan_directory(directory_path):
+    """Scan directory for malware."""
+    results_text.delete(1.0, tk.END)
+    if not directory_path:
+        return
+
+    try:
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_hash = calculate_file_hash(file_path)
+
+                if not file_hash:
+                    continue
+
+                # Check against known hashes
+                malware_found = False
+                if file_hash in KNOWN_MALWARE_HASHES.values():
+                    malware_found = True
+
+                # Check for EICAR signature
+                try:
+                    with open(file_path, "rb") as f:
+                        content = f.read()
+                        if EICAR_SIGNATURE in content:
+                            malware_found = True
+                except Exception as e:
+                    continue
+
+                if malware_found:
+                    results_text.insert(tk.END, f"🚨 MALWARE DETECTED: {file_path}\n", "red")
+                else:
+                    results_text.insert(tk.END, f"✅ Clean: {file_path}\n", "green")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"Scan failed: {str(e)}")
+
+
+def scan_files(file_paths):
+    """Scan individual files."""
+    results_text.delete(1.0, tk.END)
+    if not file_paths:
+        return
+
+    for file_path in file_paths:
+        file_hash = calculate_file_hash(file_path)
+
+        if not file_hash:
+            continue
+
+        malware_found = False
+        if file_hash in KNOWN_MALWARE_HASHES.values():
+            malware_found = True
+
+        try:
+            with open(file_path, "rb") as f:
+                content = f.read()
+                if EICAR_SIGNATURE in content:
+                    malware_found = True
+        except Exception as e:
+            continue
+
+        if malware_found:
+            results_text.insert(tk.END, f"🚨 MALWARE DETECTED: {file_path}\n", "red")
+        else:
+            results_text.insert(tk.END, f"✅ Clean: {file_path}\n", "green")
+
+
+def browse_directory():
+    """Select directory to scan."""
+    directory = filedialog.askdirectory()
+    if directory:
+        directory_entry.delete(0, tk.END)
+        directory_entry.insert(0, directory)
+        scan_directory(directory)
+
+
+def browse_files():
+    """Select files to scan."""
+    files = filedialog.askopenfilenames()
+    if files:
+        scan_files(files)
+
+
+# Create GUI
+root = tk.Tk()
+root.title("Antivirus Scanner")
+root.geometry("800x600")
+
+# Configure styles
+root.configure(bg="#f0f0f0")
+root.option_add("*Font", "Arial 10")
+
+# Create main frame
+main_frame = tk.Frame(root, padx=20, pady=20, bg="#f0f0f0")
+main_frame.pack(expand=True, fill=tk.BOTH)
+
+# Title
+title_label = tk.Label(main_frame,
+                       text="Antivirus Scanner",
+                       font=("Arial", 16, "bold"),
+                       bg="#f0f0f0",
+                       fg="#333333")
+title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+
+# Directory entry
+directory_entry = tk.Entry(main_frame, width=50)
+directory_entry.grid(row=1, column=0, padx=(0, 10), sticky="ew")
+
+# Buttons
+button_frame = tk.Frame(main_frame, bg="#f0f0f0")
+button_frame.grid(row=1, column=1, sticky="w")
+
+browse_dir_btn = tk.Button(button_frame,
+                           text="Browse Directory",
+                           command=browse_directory,
+                           bg="#4CAF50",
+                           fg="white")
+browse_dir_btn.pack(side=tk.LEFT, padx=5)
+
+browse_files_btn = tk.Button(button_frame,
+                             text="Browse Files",
+                             command=browse_files,
+                             bg="#2196F3",
+                             fg="white")
+browse_files_btn.pack(side=tk.LEFT, padx=5)
+
+# Results text area
+results_text = tk.Text(main_frame,
+                       wrap=tk.WORD,
+                       height=20,
+                       padx=10,
+                       pady=10,
+                       bg="white",
+                       font=("Consolas", 10))
+results_text.grid(row=2, column=0, columnspan=3, pady=20, sticky="nsew")
+
+# Configure text tags
+results_text.tag_config("red", foreground="red")
+results_text.tag_config("green", foreground="green")
+
+# Configure grid weights
+main_frame.columnconfigure(0, weight=1)
+main_frame.rowconfigure(2, weight=1)
+
+root.mainloop()
