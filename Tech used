@@ -1,0 +1,9 @@
+Current Implementation:
+I built a basic antivirus scanner using Python's hashlib for SHA-256 hash matching, Tkinter for a simple GUI, and manual signature checks (including EICAR test detection).
+The tool scans files/directories by comparing hashes against a predefined malware database and checks for known malicious content patterns, with results displayed in a color-coded interface.
+
+Advanced Alternatives:
+For a more robust solution, you could integrate YARA for pattern-based detection, ClamAV for access to millions of signatures, or the VirusTotal API for cloud-powered scans. 
+Replace Tkinter with PyQt or a React-based web UI, add multiprocessing for faster scans, and incorporate Cuckoo Sandbox for behavioral analysis. 
+These upgrades would enable heuristic detection, real-time monitoring, and enterprise-scale threat analysis while maintaining Python as the core language.
+
